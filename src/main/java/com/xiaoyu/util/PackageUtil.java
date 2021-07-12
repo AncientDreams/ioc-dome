@@ -1,9 +1,13 @@
 package com.xiaoyu.util;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.List;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 /**
  * @author zxy
@@ -36,9 +40,67 @@ public class PackageUtil {
             String type = url.getProtocol();
             if ("file".equals(type)) {
                 fileClassNames = getClassNameByFile(url.getPath(), packageName, childPackage);
+            }else if ("jar".equals(type)) {
+                fileClassNames  = getClassNameByJar(url.getPath(),true);
             }
         }
         return fileClassNames;
+    }
+
+
+
+    /**
+     * 从jar获取某包下所有类
+     *
+     * @param jarPath      jar文件路径
+     * @param childPackage 是否遍历子包
+     * @return 类的完整名称
+     */
+    private static List<Class<?>> getClassNameByJar(String jarPath, boolean childPackage) {
+        List<Class<?>> myClassName = new ArrayList<>();
+        String[] jarInfo = jarPath.split("!");
+        String jarFilePath = jarInfo[0].substring(jarInfo[0].indexOf("/"));
+        String packagePath = jarInfo[1].substring(1);
+        JarFile jarFile = null;
+        try {
+            jarFile = new JarFile(jarFilePath);
+            Enumeration<JarEntry> entrys = jarFile.entries();
+            while (entrys.hasMoreElements()) {
+                JarEntry jarEntry = entrys.nextElement();
+                String entryName = jarEntry.getName();
+                if (entryName.endsWith(".class")) {
+                    if (childPackage) {
+                        if (entryName.startsWith(packagePath)) {
+                            entryName = entryName.replace("/", ".").substring(0, entryName.lastIndexOf("."));
+                            myClassName.add(Class.forName(entryName));
+                        }
+                    } else {
+                        int index = entryName.lastIndexOf("/");
+                        String myPackagePath;
+                        if (index != -1) {
+                            myPackagePath = entryName.substring(0, index);
+                        } else {
+                            myPackagePath = entryName;
+                        }
+                        if (myPackagePath.equals(packagePath)) {
+                            entryName = entryName.replace("/", ".").substring(0, entryName.lastIndexOf("."));
+                            myClassName.add(Class.forName(entryName));
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            if(jarFile != null){
+                try {
+                    jarFile.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return myClassName;
     }
 
     /**
