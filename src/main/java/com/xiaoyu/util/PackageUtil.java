@@ -2,7 +2,9 @@ package com.xiaoyu.util;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.URL;
+import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
@@ -38,15 +40,20 @@ public class PackageUtil {
         URL url = loader.getResource(packagePath);
         if (url != null) {
             String type = url.getProtocol();
+            String path = null;
+            try {
+                path = URLDecoder.decode(url.getPath(), "utf-8");
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+            }
             if ("file".equals(type)) {
-                fileClassNames = getClassNameByFile(url.getPath(), packageName, childPackage);
-            }else if ("jar".equals(type)) {
-                fileClassNames  = getClassNameByJar(url.getPath(),true);
+                fileClassNames = getClassNameByFile(path, packageName, childPackage);
+            } else if ("jar".equals(type)) {
+                fileClassNames = getClassNameByJar(path, true);
             }
         }
         return fileClassNames;
     }
-
 
 
     /**
@@ -92,7 +99,7 @@ public class PackageUtil {
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
-            if(jarFile != null){
+            if (jarFile != null) {
                 try {
                     jarFile.close();
                 } catch (IOException e) {
@@ -126,7 +133,7 @@ public class PackageUtil {
                 if (childFilePath.endsWith(".class")) {
                     String newPath = childFilePath.replace("\\", "/");
                     String[] pathArray = newPath.split("/");
-                    String classPackageName =packageName + "." + pathArray[pathArray.length - 1].replace(".class", "");
+                    String classPackageName = packageName + "." + pathArray[pathArray.length - 1].replace(".class", "");
                     try {
                         myClassName.add(Class.forName(classPackageName));
                     } catch (ClassNotFoundException e) {
